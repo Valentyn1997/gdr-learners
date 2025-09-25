@@ -1,0 +1,12 @@
+# @package _global_
+model:
+  nuisance:
+    count_bins: 20           # number of knots, n_{\text{knots}}
+    noise_std_X: 0.01         # noise regularization for covariates, \sigma^2_x
+    noise_std_Y: 0.0         # noise regularization for outcomes, \sigma^2_y
+    lr: 0.001                # learning rate for the nuisance flow (CNF), \eta_\text{N}
+    batch_size: 64           # batch size for the nuisance network, b_N
+
+dataset:
+  n_samples: 5000
+  test_size: 0.15

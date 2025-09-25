@@ -1,0 +1,20 @@
+# @package _global_
+model:
+
+  target:
+    _target_: src.models.backbones.cdiffusion.CDiffusion
+    name: cdiffusion
+
+    hid_layers: ${model.nuisance.hid_layers}
+
+    t_dim: ${model.nuisance.t_dim}
+
+    diffusion_hid_dim: 10
+    T: 100
+    lr: 0.005
+    batch_size: 64
+    noise_std_X: ${model.nuisance.noise_std_X}
+
+exp:
+  eval_criteria:
+    - wass

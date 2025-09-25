@@ -1,0 +1,13 @@
+# @package _global_
+dataset:
+  _target_: src.data.ACIC2016
+  name: acic2016
+  collection: True
+  train_test_splitted: False
+  test_size: 0.15
+  n_shuffle_splits:  5           # not applicable
+
+model:
+  dim_cov: 82
+  dim_out: 1
+  hid_dim: 15

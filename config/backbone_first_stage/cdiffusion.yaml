@@ -1,0 +1,45 @@
+# @package _global_
+model:
+
+  nuisance:
+    _target_: src.models.backbones.cdiffusion.CDiffusion
+    name: cdiffusion
+
+    hid_layers: 1
+
+    # Hparams
+    t_dim: ??
+
+    diffusion_hid_dim: ???
+    T: ???
+    lr: ???               # learning rate for the nuisance flow (CNF), \eta_\text{N}
+    batch_size: ???           # batch size for the nuisance network, b_N
+    noise_std_X: ???
+
+    hparams_grid:
+      T:
+        - 50
+        - 100
+      diffusion_hid_dim:
+        - 10
+        - 15
+        - 20
+      noise_std_X:
+        - 0.0
+        - 0.01
+        - 0.05
+        - 0.1
+      lr:
+        - 0.0001
+        - 0.0005
+        - 0.001
+        - 0.005
+        - 0.01
+      batch_size:
+        - 32
+        - 64
+
+
+exp:
+  eval_criteria:
+    - wass

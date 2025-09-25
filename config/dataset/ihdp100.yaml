@@ -1,0 +1,11 @@
+# @package _global_
+dataset:
+  _target_: src.data.IHDP100  # Will be dynamically instantiated
+  name: ihdp100
+  collection: True
+  train_test_splitted: True
+
+model:
+  dim_cov: 25
+  dim_out: 1
+  hid_dim: 10

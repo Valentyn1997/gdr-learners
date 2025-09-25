@@ -1,0 +1,21 @@
+# @package _global_
+model:
+
+  target:
+    _target_: src.models.backbones.cvae.CVAE
+    name: cvae
+
+    hid_layers: ${model.nuisance.hid_layers}
+
+    beta: 0.5
+
+    # Hparams
+    vae_hid_dim: 10
+    vae_lat_dim: 3
+    lr: 0.001                # learning rate for the nuisance flow (CNF), \eta_\text{N}
+    noise_std_X: ${model.nuisance.noise_std_X}          # noise regularization for covariates, \sigma^2_x
+    batch_size: 64           # batch size for the nuisance network, b_N
+
+exp:
+  eval_criteria:
+    - wass

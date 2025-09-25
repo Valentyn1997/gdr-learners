@@ -1,0 +1,11 @@
+# @package _global_
+model:
+  nuisance:
+    count_bins: 10
+    noise_std_X: 0.0
+    noise_std_Y: 0.1
+    lr: 0.001
+    batch_size: 64
+    hid_dim: 0
+dataset:
+  dataset_ix: 55

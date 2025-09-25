@@ -1,0 +1,14 @@
+# @package _global_
+model:
+  nuisance:
+    beta: 1.0
+
+    vae_hid_dim: 5
+    vae_lat_dim: 7
+    noise_std_X: 0.0         # noise regularization for covariates, \sigma^2_x
+    lr: 0.01                # learning rate for the nuisance VAE, \eta_\text{N}
+    batch_size: 32           # batch size for the nuisance network, b_N
+
+dataset:
+  n_samples: 5000
+  test_size: 0.15

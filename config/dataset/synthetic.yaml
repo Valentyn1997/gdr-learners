@@ -1,0 +1,14 @@
+# @package _global_
+dataset:
+  _target_: src.data.SyntheticMoons
+  name: synthetic
+  collection: False
+  train_test_splitted: False
+  test_size: 0.15
+  n_shuffle_splits:  1           # not applicable
+  n_samples: 5000
+
+model:
+  dim_cov: 2
+  dim_out: 2
+  hid_dim: 15

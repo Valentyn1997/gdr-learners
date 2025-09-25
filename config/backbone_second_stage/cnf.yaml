@@ -1,0 +1,22 @@
+# @package _global_
+model:
+
+  target:
+    _target_: src.models.backbones.cnf.CNFs
+    name: cnf
+
+    hid_layers: ${model.nuisance.hid_layers}
+
+    # Hparams
+    count_bins: ${model.nuisance.count_bins}           # number of knots, n_{\text{knots}}
+    noise_std_X: ${model.nuisance.noise_std_X}          # noise regularization for covariates, \sigma^2_x
+    noise_std_Y: 0.01   # noise regularization for outcomes, \sigma^2_y
+    lr: 0.001                # learning rate for the target flow (CNF), \eta_\text{T}
+    batch_size: 64           # batch size for the target network, b_T
+
+
+
+exp:
+  eval_criteria:
+    - wass
+    - log_prob

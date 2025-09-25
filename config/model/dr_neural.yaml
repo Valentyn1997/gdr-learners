@@ -1,0 +1,27 @@
+# @package _global_
+model:
+  _target_: src.models.DRNeuralConditionalDensityEstimator
+  name: dr_neural
+
+  clip_prop: 0.1           # drop observations with too low propensity (for the IPTW / A-IPTW objective)
+
+  nuisance:
+    has_prop_score: True
+    hid_dim: ${model.hid_dim}
+    num_epochs: 200           # n_{\text{iter,N}}
+    num_burn_in_epochs: 200
+
+    prop_alpha: 1.0           # \alpha
+
+    # Tuning
+    tune_hparams: False
+    tune_range: 50            # number of trials for random search
+    tune_type: choice
+
+  target:
+    has_prop_score: False
+    hid_dim: ${model.hid_dim}
+    num_epochs: ${model.nuisance.num_epochs}           # n_{\text{iter, T}}
+
+    num_mc: 1
+    gamma: 0.995

@@ -1,0 +1,15 @@
+# @package _global_
+dataset:
+  _target_: src.data.HCMNIST  # Will be dynamically instantiated
+  name: hcmnist
+  collection: False
+  train_test_splitted: True
+
+model:
+  dim_cov: 785
+  dim_out: 1
+  hid_dim: 64
+
+  nuisance:
+    hid_layers: 2
+

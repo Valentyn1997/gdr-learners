@@ -1,0 +1,39 @@
+# @package _global_
+model:
+
+  nuisance:
+    _target_: src.models.backbones.cgan.CGAN
+    name: cgan
+
+    hid_layers: 1
+
+    # Hparams
+    gan_hid_dim: ???
+    lr: ???                # learning rate for the nuisance flow (CNF), \eta_\text{N}
+    batch_size: ???           # batch size for the nuisance network, b_N
+    noise_std_X: ???
+
+    hparams_grid:
+      gan_hid_dim:
+        - 5
+        - 10
+        - 15
+        - 20
+        - 25
+      noise_std_X:
+        - 0.0
+        - 0.01
+        - 0.05
+        - 0.1
+      lr:
+        - 0.0001
+        - 0.0005
+        - 0.001
+      batch_size:
+        - 32
+        - 64
+
+
+exp:
+  eval_criteria:
+    - wass
