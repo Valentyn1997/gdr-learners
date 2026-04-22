@@ -9,3 +9,4 @@ model:
   dim_cov: 25
   dim_out: 1
   hid_dim: 10
+  dim_treat: 1

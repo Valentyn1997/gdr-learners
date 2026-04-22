@@ -9,7 +9,5 @@ model:
   dim_cov: 785
   dim_out: 1
   hid_dim: 64
-
-  nuisance:
-    hid_layers: 2
+  dim_treat: 1
 

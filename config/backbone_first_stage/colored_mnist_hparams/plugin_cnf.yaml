@@ -1,0 +1,32 @@
+# @package _global_
+model:
+  nuisance:
+    hid_layers_out: 4
+
+    count_bins: 0             #  not used in CMADE
+    noise_std_X: 0.0         # noise regularization for covariates, \sigma^2_x
+    noise_std_Y: 0.01         # noise regularization for outcomes, \sigma^2_y
+    lr: 0.001                # learning rate for the nuisance flow (CNF), \eta_\text{N}
+    batch_size: 32           # batch size for the nuisance network, b_N
+
+    hparams_grid:
+      count_bins:
+        - 0
+      noise_std_X:
+        - 0
+      noise_std_Y:
+        - 0.01
+        - 0.05
+        - 0.1
+      lr:
+        - 1e-3
+        - 5e-3
+      batch_size:
+        - 32
+        - 64
+      hid_layers_out:
+        - 1
+        - 3
+        - 4
+        - 6
+        - 8

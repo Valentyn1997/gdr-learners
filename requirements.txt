@@ -19,7 +19,7 @@ torch>=2.0.1
 torchvision
 lightning
 pytorch-lightning
-mlflow
+mlflow==2.22.2
 numpy<2.0.0
 pydantic<2
 scikit-learn
@@ -31,3 +31,4 @@ ray[tune]==1.13.0
 
 git+https://github.com/fadel/pytorch_ema
 POT
+python-mnist

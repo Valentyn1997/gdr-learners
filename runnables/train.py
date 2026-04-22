@@ -3,7 +3,6 @@ import hydra
 import torch
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
-import numpy as np
 from lightning.fabric.utilities.seed import seed_everything
 from sklearn.model_selection import ShuffleSplit, KFold
 
@@ -64,12 +63,21 @@ def main(args: DictConfig):
 
             model = instantiate(args.model, args, _recursive_=False)
 
+            if args.exp.mode == 'img' and args.exp.plot_img:  # Plotting ground-truth
+                model.plot_img(digit=-1, sample=train_data_dict[f'out_f_scaled'], name='gt_f')
+                model.plot_img(digit=0, sample=test_data_dict[f'out_pot0_scaled'], name='gt_0')
+                model.plot_img(digit=4, sample=test_data_dict[f'out_pot4_scaled'], name='gt_4')
+
             # Finetuning for the first split
             if args.model.nuisance.tune_hparams and sub_ix == 0:
                 model.finetune_nuisances(train_data_dict, {'cpu': 0.5, 'gpu': 0.1})
 
             # Fitting the model
             model.fit(train_data_dict=train_data_dict, log=args.exp.logging)
+
+            if args.exp.mode == 'img' and args.exp.plot_img:
+                model.plot_img(digit=0, name=args.model.name)
+                model.plot_img(digit=4, name=args.model.name)
 
             # Evaluation of nuisance factual log-prob | ELBO
             results_in = model.evaluate_nuisance(data_dict=train_data_dict, log=args.exp.logging, prefix='in')

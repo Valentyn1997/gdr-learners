@@ -10,4 +10,5 @@ dataset:
 model:
   dim_cov: 82
   dim_out: 1
+  dim_treat: 1
   hid_dim: 15

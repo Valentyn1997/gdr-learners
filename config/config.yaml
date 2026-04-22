@@ -5,6 +5,7 @@ dataset:
   test_size: 0.2                    # train/test split ratio
   n_shuffle_splits: 1
   dataset_ix:                       # dataset index for ihdp
+  normalize_cov: True
 
 # Model specific parameters
 model:
@@ -24,6 +25,8 @@ exp:
   device: cpu
   logging: True                     # Logging to MlFlow
   eval_num_mc: 200
+  plot_img: True
+  mode: tab                         # img, tab
   mlflow_uri: http://127.0.0.1:5003 # MlFlow server is located on
 
 # Hydra defaults

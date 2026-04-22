@@ -1,0 +1,22 @@
+# @package _global_
+dataset:
+  _target_: src.data.ColoredMNIST  # Will be dynamically instantiated
+  name: colored_mnist
+  collection: False
+  train_test_splitted: True
+  img_size: 10
+  normalize_cov: False
+  dim_treat: ${model.dim_treat}
+  n_train: 30000
+  n_test: 10
+  conf_p: 0.85
+
+model:
+  dim_cov: ${model.dim_treat}
+  dim_out: 300
+  dim_treat: 5
+  hid_dim: ${model.dim_treat}
+
+exp:
+  mode: img
+

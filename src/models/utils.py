@@ -135,8 +135,12 @@ class SinusoidalEmbedding(nn.Module):
 
 
 def get_iptw(treat_f, prop, clip_prop, normalize=False):
-    ipwt = ((treat_f == 1.0) & (prop >= clip_prop)).float() / (prop + 1e-9) + \
-           ((treat_f == 0.0) & ((1 - prop) >= clip_prop)).float() / (1 - prop + 1e-9)
+    if treat_f.shape[-1] == 1:  # Binary treatment
+        ipwt = ((treat_f == 1.0) & (prop >= clip_prop)).float() / (prop + 1e-9) + \
+               ((treat_f == 0.0) & ((1 - prop) >= clip_prop)).float() / (1 - prop + 1e-9)
+    else:  # Multiple treatments
+        ipwt = (prop[treat_f == 1.0] >= clip_prop).float() / (prop[treat_f == 1.0] + 1e-9)
+        ipwt = ipwt.unsqueeze(-1)
     if normalize:
         ipwt_normalized = ipwt / ipwt.mean()
         return ipwt_normalized
@@ -160,7 +164,7 @@ def wass_dist(sample0, sample1):
 def subset_by_indices(data_dict: dict, indices: list):
     subset_data_dict = {}
     for (k, v) in data_dict.items():
-        if not isinstance(data_dict[k], float):
+        if not isinstance(data_dict[k], float) and not isinstance(data_dict[k], str):
             subset_data_dict[k] = np.copy(data_dict[k][indices])
         else:
             subset_data_dict[k] = deepcopy(data_dict[k])
@@ -179,8 +183,8 @@ def fit_eval_kfold(args: dict, orig_hparams: DictConfig, model_cls, train_data_d
     new_params = deepcopy(orig_hparams)
     model_cls.set_nuisances_hparams(new_params['model']['nuisance'], args)
     # model_cls.set_subnet_hparams(new_params[subnet_name], args)
-    new_params.exp.device = 'cpu'
-    # torch.set_default_device('cuda')
+    # new_params.exp.device = 'cpu'
+    torch.set_default_device('cuda')
 
     if val_data_dict is None:  # KFold hparam tuning
         kf = KFold(n_splits=5, random_state=orig_hparams.exp.seed, shuffle=True)

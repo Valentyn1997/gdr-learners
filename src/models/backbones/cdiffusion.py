@@ -8,6 +8,7 @@ from torch_ema import ExponentialMovingAverage
 
 from src.models.utils import HyperDense, SinusoidalEmbedding
 from src.models.backbones.neural_cond_estimator import NeuralConditionalDistEstimator
+from src.models.backbones.image import ConditionalUNet
 
 
 def linear_beta_schedule(T: int, b0: float, b1: float) -> torch.Tensor:
@@ -90,19 +91,28 @@ class CDiffusion(NeuralConditionalDistEstimator):
         self.T = args.model[self.kind].T
         self.t_dim = args.model[self.kind].t_dim
         self.diffusion_hid_dim = args.model[self.kind].diffusion_hid_dim
+        self.diffusion_lat_dim = args.model[self.kind].diffusion_lat_dim
         self.noise_std_X = args.model[self.kind].noise_std_X
 
         # Model init = Conditional VAE
         self.t_embed = SinusoidalEmbedding(self.t_dim).float()
         self.diffusion = Diffusion(self.T, 1e-4, 2e-2, self.dim_out)
 
-        self.cond_eps_nn = DenseNN(self.dim_hid + self.dim_treat, [self.dim_hid],
-                                       param_dims=[self.diffusion_hid_dim * (self.dim_out + self.t_dim), self.diffusion_hid_dim,
-                                                   self.dim_out * self.diffusion_hid_dim, self.dim_out],
-                                       nonlinearity=torch.nn.ELU()).float()
+        if args.exp.mode == 'tab':
+            self.cond_eps_nn = DenseNN(self.dim_hid + self.dim_treat, [self.dim_hid],
+                                           param_dims=[self.diffusion_hid_dim * (self.dim_out + self.t_dim), self.diffusion_hid_dim,
+                                                       self.dim_out * self.diffusion_hid_dim, self.dim_out],
+                                           nonlinearity=torch.nn.ELU()).float()
 
-        self.cond_eps = HyperDense(in_features=self.dim_out + self.t_dim, hid_features=self.diffusion_hid_dim,
-                                   out_features=self.dim_out, activation=torch.nn.ELU(), cond_nn=self.cond_eps_nn)
+            self.cond_eps = HyperDense(in_features=self.dim_out + self.t_dim, hid_features=self.diffusion_hid_dim,
+                                       out_features=self.dim_out, activation=torch.nn.ELU(), cond_nn=self.cond_eps_nn)
+        elif args.exp.mode == 'img':
+            self.cond_eps = ConditionalUNet(shape=(3, args.dataset.img_size, args.dataset.img_size),
+                                            latent_dim=self.diffusion_lat_dim,
+                                            cond_dim=self.dim_hid + self.dim_treat + self.t_dim,
+                                            hidden_channels=(self.diffusion_hid_dim, self.diffusion_hid_dim)).float()
+        else:
+            raise NotImplementedError()
 
         self.ema_optimizer = None
 
@@ -110,13 +120,16 @@ class CDiffusion(NeuralConditionalDistEstimator):
         """
         Init optimizer for the nuisance flow
         """
-        if self.kind == 'nuisance':
+        if self.hparams.exp.mode == 'tab':
             modules = torch.nn.ModuleList([self.repr_nn, self.cond_eps_nn])
-            # return torch.optim.SGD(list(modules.parameters()), lr=self.lr, momentum=0.9)
+        elif self.hparams.exp.mode == 'img':
+            modules = torch.nn.ModuleList([self.repr_nn, self.cond_eps])
+        else:
+            raise NotImplementedError()
+
+        if self.kind == 'nuisance':
             return torch.optim.AdamW(list(modules.parameters()), lr=self.lr)
         elif self.kind == 'target':
-            modules = torch.nn.ModuleList([self.repr_nn, self.cond_eps_nn])
-            # optimizer = torch.optim.SGD(list(modules.parameters()), lr=self.lr, momentum=0.9)
             optimizer = torch.optim.AdamW(list(modules.parameters()), lr=self.lr)
             ema_target = ExponentialMovingAverage(list(modules.parameters()), decay=self.gamma)
             return optimizer, ema_target
@@ -124,7 +137,16 @@ class CDiffusion(NeuralConditionalDistEstimator):
             raise NotImplementedError()
 
     def _cond_sample(self, context, n_sample) -> torch.Tensor:
-        sample = self.diffusion.sample(lambda inp: self.cond_eps(context.unsqueeze(0), inp), self.t_embed, n_sample=n_sample)
+        if torch.tensor(n_sample).prod() > 10000 and len(n_sample) == 2 and self.hparams.exp.mode == 'img':
+            sample = []
+            batch_size = 500
+            for i in range((n_sample[1] - 1) // batch_size + 1):
+                cond_eps_lambda = lambda inp: self.cond_eps(context[i * batch_size: (i + 1) * batch_size, :].unsqueeze(0), inp)
+                sample.append(self.diffusion.sample(cond_eps_lambda, self.t_embed, n_sample=(n_sample[0], batch_size)))
+            sample = torch.cat(sample, dim=1)
+        else:
+            cond_eps_lambda = lambda inp: self.cond_eps(context.unsqueeze(0), inp)
+            sample = self.diffusion.sample(cond_eps_lambda, self.t_embed, n_sample=n_sample)
         return sample
 
 

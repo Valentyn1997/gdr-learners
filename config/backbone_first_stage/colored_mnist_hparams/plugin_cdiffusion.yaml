@@ -1,0 +1,37 @@
+# @package _global_
+model:
+  nuisance:
+    t_dim: 20
+
+    diffusion_lat_dim: 500
+    T: 150
+    diffusion_hid_dim: 64
+    noise_std_X: 0.0         # noise regularization for covariates, \sigma^2_x
+    lr: 0.0005                # learning rate for the nuisance VAE, \eta_\text{N}
+    batch_size: 64           # batch size for the nuisance network, b_N
+
+    hparams_grid:
+      T:
+        - 50
+        - 100
+        - 150
+      diffusion_hid_dim:
+        - 32
+        - 64
+        - 128
+      diffusion_lat_dim:
+        - 200
+        - 500
+        - 700
+      noise_std_X:
+        - 0.0
+      lr:
+        - 0.0001
+        - 0.0005
+        - 0.001
+        - 0.005
+        - 0.01
+      batch_size:
+        - 32
+        - 64
+

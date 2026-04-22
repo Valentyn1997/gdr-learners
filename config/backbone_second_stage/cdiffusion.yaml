@@ -8,6 +8,7 @@ model:
     hid_layers: ${model.nuisance.hid_layers}
 
     t_dim: ${model.nuisance.t_dim}
+    diffusion_lat_dim: ${model.nuisance.diffusion_lat_dim}
 
     diffusion_hid_dim: 10
     T: 100

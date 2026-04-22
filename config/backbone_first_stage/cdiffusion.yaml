@@ -9,6 +9,7 @@ model:
 
     # Hparams
     t_dim: ??
+    diffusion_lat_dim: 1  # Used only for images (= ConditionalUNet)
 
     diffusion_hid_dim: ???
     T: ???

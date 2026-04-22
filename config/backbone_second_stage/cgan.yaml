@@ -8,8 +8,9 @@ model:
     hid_layers: ${model.nuisance.hid_layers}
 
     # Hparams
-    gan_hid_dim: 5
-    lr: 0.0001
+    gan_lat_dim: ${model.dim_out}
+    gan_hid_dim: ${model.nuisance.gan_hid_dim}
+    lr: 0.00005
     batch_size: 64           # batch size for the nuisance network, b_N
     noise_std_X: ${model.nuisance.noise_std_X}
 

@@ -6,6 +6,7 @@ model:
     name: cnf
 
     hid_layers: ${model.nuisance.hid_layers}
+    hid_layers_out: ${model.nuisance.hid_layers_out}
 
     # Hparams
     count_bins: ${model.nuisance.count_bins}           # number of knots, n_{\text{knots}}

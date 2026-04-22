@@ -8,6 +8,7 @@ from torch_ema import ExponentialMovingAverage
 
 
 from src.models.backbones.neural_cond_estimator import NeuralConditionalDistEstimator
+from src.models.backbones.image import ConditionalImageFlow
 
 
 class LinerazableDenseNN(DenseNN):
@@ -65,37 +66,46 @@ class CNFs(NeuralConditionalDistEstimator):
         self.cond_scale = torch.nn.Parameter(torch.ones((self.dim_out, )).float())
         self.cond_affine_transform = T.AffineTransform(self.cond_loc, self.cond_scale)
 
-        if self.dim_out == 1:
+        if args.exp.mode == 'tab':
 
-            self.cond_base_dist = dist.Normal(torch.zeros(self.dim_out).float(), torch.ones(self.dim_out).float())
+            if self.dim_out == 1:
 
-            if self.dim_hid > 0:
-                self.cond_dist_nn = DenseNN(self.dim_hid + self.dim_treat, [self.dim_hid],
-                                            param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)],
-                                            nonlinearity=torch.nn.ELU()).float()
-            else:  # linear hypernetwork setup
-                self.cond_dist_nn = LinerazableDenseNN(self.dim_cov + self.dim_treat, [],
-                                            param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)],
-                                            nonlinearity=torch.nn.ELU()).float()
-            self.cond_spline_transform = T.ConditionalSpline(self.cond_dist_nn, self.dim_out,
-                                                             order='quadratic',
-                                                             count_bins=self.count_bins,
-                                                             bound=self.scaled_out_f_bound).to(self.device)
-        else:
-            self.cond_base_dist = dist.MultivariateNormal(torch.zeros(self.dim_out).float(),
-                                                          torch.diag(torch.ones(self.dim_out)).float())
+                self.cond_base_dist = dist.Normal(torch.zeros(self.dim_out).float(), torch.ones(self.dim_out).float())
 
-            self.cond_dist_nn = ConditionalAutoRegressiveNN(self.dim_out, self.dim_hid + self.dim_treat,
-                                                            [self.dim_hid],
-                                                            param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)]).float()
-            self.cond_spline_transform = T.ConditionalSplineAutoregressive(self.dim_out,
-                                                                           self.cond_dist_nn,
-                                                                           order='quadratic',
-                                                                           count_bins=self.count_bins,
-                                                                           bound=self.scaled_out_f_bound).to(self.device)
+                if self.dim_hid > 0:
+                    self.cond_dist_nn = DenseNN(self.dim_hid + self.dim_treat, [self.dim_hid],
+                                                param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)],
+                                                nonlinearity=torch.nn.ELU()).float()
+                else:  # linear hypernetwork setup
+                    self.cond_dist_nn = LinerazableDenseNN(self.dim_cov + self.dim_treat, [],
+                                                param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)],
+                                                nonlinearity=torch.nn.ELU()).float()
+                self.cond_spline_transform = T.ConditionalSpline(self.cond_dist_nn, self.dim_out,
+                                                                 order='quadratic',
+                                                                 count_bins=self.count_bins,
+                                                                 bound=self.scaled_out_f_bound).to(self.device)
+            else:
+                self.cond_base_dist = dist.MultivariateNormal(torch.zeros(self.dim_out).float(),
+                                                              torch.diag(torch.ones(self.dim_out)).float())
 
-        self.cond_flow_dist = dist.ConditionalTransformedDistribution(self.cond_base_dist,
+                self.cond_dist_nn = ConditionalAutoRegressiveNN(self.dim_out, self.dim_hid + self.dim_treat,
+                                                                [self.dim_hid],
+                                                                param_dims=[self.count_bins, self.count_bins, (self.count_bins - 1)]).float()
+                self.cond_spline_transform = T.ConditionalSplineAutoregressive(self.dim_out,
+                                                                               self.cond_dist_nn,
+                                                                               order='quadratic',
+                                                                               count_bins=self.count_bins,
+                                                                               bound=self.scaled_out_f_bound).to(self.device)
+
+            self.cond_flow_dist = dist.ConditionalTransformedDistribution(self.cond_base_dist,
                                                                       [self.cond_affine_transform, self.cond_spline_transform])
+        elif args.exp.mode == 'img':
+            self.hid_layers_out = args.model[self.kind].hid_layers_out
+            self.cond_flow_dist = ConditionalImageFlow(shape=(3, args.dataset.img_size, args.dataset.img_size),
+                                                       cond_dim=self.dim_hid + self.dim_treat,
+                                                       hidden_sizes=[self.dim_out], K=self.hid_layers_out).float().to(self.device)
+        else:
+            raise NotImplementedError()
 
         self.ema_optimizer = None
 
@@ -104,28 +114,59 @@ class CNFs(NeuralConditionalDistEstimator):
         Init optimizer for the nuisance flow
         """
         if self.kind == 'nuisance':
-            modules = torch.nn.ModuleList([self.repr_nn, self.cond_dist_nn])
-            return torch.optim.SGD(list(modules.parameters()) + [self.cond_loc, self.cond_scale], lr=self.lr, momentum=0.9)
+            if self.hparams.exp.mode == 'tab':
+                modules = torch.nn.ModuleList([self.repr_nn, self.cond_dist_nn])
+                return torch.optim.SGD(list(modules.parameters()) + [self.cond_loc, self.cond_scale], lr=self.lr, momentum=0.9)
+            elif self.hparams.exp.mode == 'img':
+                modules = torch.nn.ModuleList([self.repr_nn, self.cond_flow_dist])
+                return torch.optim.AdamW(list(modules.parameters()), lr=self.lr)
+            else:
+                raise NotImplementedError()
+
         elif self.kind == 'target':
-            modules = torch.nn.ModuleList([self.repr_nn, self.cond_dist_nn])
-            parameters = list(modules.parameters()) + [self.cond_loc, self.cond_scale]
-            optimizer = torch.optim.SGD(parameters, lr=self.lr, momentum=0.9)
-            ema_target = ExponentialMovingAverage(parameters, decay=self.gamma)
+            if self.hparams.exp.mode == 'tab':
+                modules = torch.nn.ModuleList([self.repr_nn, self.cond_dist_nn])
+                parameters = list(modules.parameters()) + [self.cond_loc, self.cond_scale]
+                optimizer = torch.optim.SGD(parameters, lr=self.lr, momentum=0.9)
+                ema_target = ExponentialMovingAverage(parameters, decay=self.gamma)
+            elif self.hparams.exp.mode == 'img':
+                modules = torch.nn.ModuleList([self.repr_nn, self.cond_flow_dist])
+                parameters = list(modules.parameters())
+                optimizer = torch.optim.AdamW(parameters, lr=self.lr)
+                ema_target = ExponentialMovingAverage(parameters, decay=self.gamma)
+            else:
+                raise NotImplementedError()
+
             return optimizer, ema_target
+
         else:
             raise NotImplementedError()
 
     def _post_nuisance_optimizer_step(self):
-        self.cond_flow_dist.clear_cache()
+        if self.hparams.exp.mode == 'tab':
+            self.cond_flow_dist.clear_cache()
 
     def _cond_log_prob(self, context, out) -> torch.Tensor:
-        return self.cond_flow_dist.condition(context).log_prob(out)
+        if self.hparams.exp.mode == 'tab':
+            return self.cond_flow_dist.condition(context).log_prob(out)
+        elif self.hparams.exp.mode == 'img':
+            return self.cond_flow_dist.log_prob(out, context).unsqueeze(-1)
+        else:
+            raise NotImplementedError()
 
     def _cond_dist(self, context) -> torch.distributions.Distribution:
-        return self.cond_flow_dist.condition(context)
+        if self.hparams.exp.mode == 'tab':
+            return self.cond_flow_dist.condition(context)
+        else:
+            raise NotImplementedError()
 
     def _cond_sample(self, context, n_sample) -> torch.Tensor:
-        return self._cond_dist(context).sample(n_sample)
+        if self.hparams.exp.mode == 'tab':
+            return self._cond_dist(context).sample(n_sample)
+        elif self.hparams.exp.mode == 'img':
+            return self.cond_flow_dist.sample(n_sample, context)
+        else:
+            raise NotImplementedError()
 
     def _cond_training_step(self, repr_f, treat_f, out_f_scaled, optimizer=None):
         # Representation -> Adding noise + concat of factual treatment -> Conditional distribution

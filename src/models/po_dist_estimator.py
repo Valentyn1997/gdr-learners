@@ -8,9 +8,12 @@ import ray
 from copy import deepcopy
 from typing import Tuple, Union
 
-
+from src import ROOT_PATH
 from src.models.utils import fit_eval_kfold
+from src.data.colored_mnist import show_image_grid
 
+import tempfile
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +29,8 @@ class PODistributionEstimator(torch.nn.Module):
         super(PODistributionEstimator, self).__init__()
 
         # Dataset params
-        self.dim_out, self.dim_cov, self.dim_treat = args.model.dim_out, args.model.dim_cov, 1
-        assert self.dim_treat == 1
-        self.treat_options = [0.0, 1.0]
+        self.dim_out, self.dim_cov, self.dim_treat = args.model.dim_out, args.model.dim_cov, args.model.dim_treat
+        self.treat_options = [0, 1] if self.dim_treat == 1 else np.arange(self.dim_treat)
 
         # Model hyparams
         self.hparams = args
@@ -146,4 +148,44 @@ class PODistributionEstimator(torch.nn.Module):
         self.__init__(self.hparams)
         return self
 
+    def plot_img(self, digit, sample=None, pot_out_model=None, name=''):
+
+        color_dict = {
+            -1: 'all',
+            0: 'red',
+            1: 'orange',
+            2: 'yellow',
+            3: 'lightgreen',
+            4: 'green',
+            5: 'lightblue',
+            6: 'blue',
+            7: 'darkblue',
+            8: 'violet',
+            9: 'pink'
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            if self.hparams.exp.logging:
+                save_path = Path(tmp_dir, f"{name}_colored_mnist_grid_{digit}.png")
+            else:
+                save_path = f'{ROOT_PATH}/{name}_colored_mnist_grid_{digit}.png'
+
+            if sample is None:
+                pot_out_model = self.pot_out_model if pot_out_model is None else pot_out_model
+
+                # One-hot encoding
+                treats_pot, cov_f = torch.zeros((self.dim_treat, self.dim_treat)).float(), torch.zeros((self.dim_treat, self.dim_cov)).float()
+                treats_pot[:, digit] = 1.0
+
+                for color in range(self.dim_treat):
+                    cov_f[color, color] = 1.0
+
+                sample = pot_out_model.cond_sample(treats_pot, cov_f, n_sample=(2, self.dim_treat)).detach()
+
+            sample = sample.reshape(-1, 3, self.hparams.dataset.img_size, self.hparams.dataset.img_size)
+            sample = torch.tensor(sample).float().cpu()
+            show_image_grid(sample, self.dim_treat, dir=save_path)
+
+            if self.hparams.exp.logging:
+                self.mlflow_logger.experiment.log_artifact(self.mlflow_logger.run_id, save_path, 'img')
 

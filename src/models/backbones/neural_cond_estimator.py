@@ -37,8 +37,7 @@ class NeuralConditionalDistEstimator(torch.nn.Module):
         self.has_prop_score = args.model[self.kind].has_prop_score
 
         # Dataset params
-        self.dim_out, self.dim_cov, self.dim_treat = args.model.dim_out, args.model.dim_cov, 1
-        assert self.dim_treat == 1
+        self.dim_out, self.dim_cov, self.dim_treat = args.model.dim_out, args.model.dim_cov, args.model.dim_treat
 
         # Model hyparams & Train params
         self.hparams = args
@@ -181,8 +180,11 @@ class NeuralConditionalDistEstimator(torch.nn.Module):
     def get_propensity(self, cov_f) -> [torch.Tensor, torch.Tensor]:
         if self.has_prop_score:
             _, prop_preds = self.repr_nn(cov_f)
-            prop1 = torch.sigmoid(prop_preds)
-            prop0 = 1.0 - prop1
-            return prop0, prop1
+            if self.dim_treat == 1:
+                prop1 = torch.sigmoid(prop_preds)
+                return prop1
+            else:
+                prop = torch.softmax(prop_preds, dim=-1)
+                return prop
         else:
             raise NotImplementedError()

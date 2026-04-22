@@ -1,8 +1,8 @@
 # @package _global_
 model:
   nuisance:
-    gan_hid_dim: 5
-    noise_std_X: 0.01         # noise regularization for covariates, \sigma^2_x
-    lr: 0.0001                # learning rate for the nuisance VAE, \eta_\text{N}
+    gan_hid_dim: 15
+    noise_std_X: 0.05         # noise regularization for covariates, \sigma^2_x
+    lr: 0.0005                # learning rate for the nuisance VAE, \eta_\text{N}
     batch_size: 32           # batch size for the nuisance network, b_N
 

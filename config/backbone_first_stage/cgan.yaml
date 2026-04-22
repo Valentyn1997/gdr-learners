@@ -8,6 +8,7 @@ model:
     hid_layers: 1
 
     # Hparams
+    gan_lat_dim: ${model.dim_out}
     gan_hid_dim: ???
     lr: ???                # learning rate for the nuisance flow (CNF), \eta_\text{N}
     batch_size: ???           # batch size for the nuisance network, b_N
@@ -20,6 +21,8 @@ model:
         - 15
         - 20
         - 25
+        - 30
+        - 50
       noise_std_X:
         - 0.0
         - 0.01
@@ -29,6 +32,7 @@ model:
         - 0.0001
         - 0.0005
         - 0.001
+        - 0.005
       batch_size:
         - 32
         - 64

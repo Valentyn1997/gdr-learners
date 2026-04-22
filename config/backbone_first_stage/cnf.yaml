@@ -6,6 +6,7 @@ model:
     name: cnf
 
     hid_layers: 1
+    hid_layers_out: 1         # Used only for images (= CMADE)
 
     # Hparams
     count_bins: ???           # number of knots, n_{\text{knots}}
